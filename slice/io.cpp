@@ -1,15 +1,6 @@
 #include "datastructures.hpp"
 #include <boost/algorithm/string.hpp>
 
-bool objFlag()
-{
-	return true;
-}
-bool shpFlag()
-{
-	return true;
-}
-
 
 bool inputValues(variables_map vm, vector<double> &heights)
 {
@@ -44,12 +35,12 @@ bool inputValues(variables_map vm, vector<double> &heights)
 	return true;
 }
 
-bool readFile(boost::shared_array<double> &x,
-    boost::shared_array<double> &y,
-    boost::shared_array<double> &depth,
-    boost::shared_array<int> &ele,
-    int &node,
-    int &nele,
+bool readFile(vector<boost::shared_array<double>> &x,
+    vector<boost::shared_array<double>> &y,
+    vector<boost::shared_array<double>> &depth,
+    vector<boost::shared_array<int>> &ele,
+    vector<int> &node,
+    vector<int> &nele,
 	string input)
 {
 
@@ -69,53 +60,57 @@ bool readFile(boost::shared_array<double> &x,
         return false;
     if (!scene->HasMeshes())
         return false;
-    vector<int> indexes;
-    vector<double> xvec;
-    vector<double> yvec;
-    vector<double> zvec;
+    vector<vector<int>> indexes;
+    vector<vector<double>> xvec;
+    vector<vector<double>> yvec;
+    vector<vector<double>> zvec;
     int total = 0;
     for (int j = 0; j < scene->mNumMeshes; ++j)
     {
-   aiMesh* mesh =  scene->mMeshes[j];
-   int tnode = mesh->mNumVertices;
-   int tnele = mesh->mNumFaces*3;
+        xvec.push_back(vector<double>());
+        yvec.push_back(vector<double>());
+        zvec.push_back(vector<double>());
+        indexes.push_back(vector<int>());
+       aiMesh* mesh =  scene->mMeshes[j];
+       node.push_back(mesh->mNumVertices);
+       nele.push_back(mesh->mNumFaces*3);
      
-     for (int i = 0; i < tnode; ++i)
+       for (int i = 0; i < node[j]; ++i)
      {
-         xvec.push_back(mesh->mVertices[i].x);
-         yvec.push_back(mesh->mVertices[i].z);
-         zvec.push_back(mesh->mVertices[i].y);
+         xvec[j].push_back(mesh->mVertices[i].x);
+         yvec[j].push_back(mesh->mVertices[i].z);
+         zvec[j].push_back(mesh->mVertices[i].y);
      }
-     for (int i = 0; i < tnele/3; ++i)
+       for (int i = 0; i < nele[j]/3; ++i)
      {
          if (mesh->mFaces[i].mNumIndices == 3)
          {
-             indexes.push_back(mesh->mFaces[i].mIndices[0]+total);
-             indexes.push_back(mesh->mFaces[i].mIndices[1]+total);
-             indexes.push_back(mesh->mFaces[i].mIndices[2]+total);
+             indexes[j].push_back(mesh->mFaces[i].mIndices[0]);
+             indexes[j].push_back(mesh->mFaces[i].mIndices[1]);
+             indexes[j].push_back(mesh->mFaces[i].mIndices[2]);
          }
      }
-     total += tnode + 1;
     }
-    
-   node = xvec.size();
-   nele = indexes.size();
-	 x = boost::shared_array<double>(new double[node]);
-	 y = boost::shared_array<double>(new double[node]);
-	 depth = boost::shared_array<double>(new double[node]);
-	 ele = boost::shared_array<int>(new int[nele]);
+    for (int j = 0; j < scene->mNumMeshes; ++j)
+    {
+	 x.push_back(boost::shared_array<double>(new double[node[j]]));
+     y.push_back(boost::shared_array<double>(new double[node[j]]));
+     depth.push_back(boost::shared_array<double>(new double[node[j]]));
+     ele.push_back(boost::shared_array<int>(new int[nele[j]]));
      
-     for (int i = 0; i < node; ++i)
+     for (int i = 0; i < node[j]; ++i)
      {
-         x[i] = xvec[i];
-         y[i] = yvec[i];
-         depth[i] = zvec[i];
+         x[j][i] = xvec[j][i];
+         y[j][i] = yvec[j][i];
+         depth[j][i] = zvec[j][i];
      }
-     for (int i = 0; i < nele; ++i)
+     for (int i = 0; i < nele[j]; ++i)
      {
-         ele[i] = indexes[i];
+         ele[j][i] = indexes[j][i];
      }
+    }
 }
+   /*
      if (false)
    {   
 	string filename = "debOutput.obj";
@@ -149,11 +144,12 @@ bool readFile(boost::shared_array<double> &x,
 		}
 	}
 	fout.close();
-   }
+   }*/
    return true;
 }
 
-void outputObj(boost::shared_array<boost::shared_ptr<vector<vector<pointxy>>>> &contours, vector<double> &heights, int nL,string output)
+void outputObj(boost::shared_array<boost::shared_array<boost::shared_ptr<vector<vector<pointxy>>>>> &contours,
+    vector<double> &heights, int nL, int nM,string output)
 {
     output = "out";
 	string filename = output + ".obj";
@@ -163,7 +159,8 @@ void outputObj(boost::shared_array<boost::shared_ptr<vector<vector<pointxy>>>> &
 	int counter = 0;
 	for (int lin = 0; lin < nL; ++lin)
 	{
-		for (vector<vector<pointxy>>::iterator it = contours[lin]->begin(); it < contours[lin]->end(); ++it)
+        for (int j = 0; j < nM; ++j)
+		for (vector<vector<pointxy>>::iterator it = contours[lin][j]->begin(); it < contours[lin][j]->end(); ++it)
 		{
 			vector<pointxy> intersect = (*it);
 			for (int k = 0; k < intersect.size(); k++)

@@ -7,13 +7,14 @@
 
 bool inputValues(variables_map vm, vector<double> &heights);
 
-void outputObj(boost::shared_array<boost::shared_ptr<vector<vector<pointxy>>>> &contours, vector<double> &heights, int nL,string output);
-bool readFile(boost::shared_array<double> &x,
-    boost::shared_array<double> &y,
-    boost::shared_array<double> &depth,
-    boost::shared_array<int> &ele,
-    int &node,
-    int &nele,
+void outputObj(boost::shared_array<boost::shared_array<boost::shared_ptr<vector<vector<pointxy>>>>> &contours,
+    vector<double> &heights, int nL, int nM,string output);
+bool readFile(vector<boost::shared_array<double>> &x,
+    vector<boost::shared_array<double>> &y,
+    vector<boost::shared_array<double>> &depth,
+    vector<boost::shared_array<int>> &ele,
+    vector<int> &node,
+    vector<int> &nele,
 	string input);
 int retLine(double current, int size,
 	boost::shared_array<double> &x, boost::shared_array<double> &y, boost::shared_array<double> &depth,
@@ -25,36 +26,42 @@ void outputLines(string input, string output, vector<string> attnames, vector<do
     size_t const os_threads = hpx::get_os_thread_count();
     cout << "Program will run on " << os_threads << " threads.\n";
 	int nL = heights.size();
+    int nM;
 	cout << "Reading in file.\n";
 
 
    /* Open the file. NC_NOWRITE tells netCDF we want read-only access
     * to the file.*/
 	 
-	boost::shared_array<double> x;
-	boost::shared_array<double> y;
-	boost::shared_array<double> depth;
-	boost::shared_array<int> ele;
-	 int node = 0;
-	 int nele = 0;
+	vector<boost::shared_array<double>> x;
+	vector<boost::shared_array<double>> y;
+	vector<boost::shared_array<double>> depth;
+	vector<boost::shared_array<int>> ele;
+	 vector<int> node;
+	 vector<int> nele;
 	 if (!readFile(x,y,depth,ele,node,nele, input))
 	 {
 		 cout << "File read error. Check input filename and validity of input data.\n";
 		 return;
 	 }
+        nM = node.size();
     cout << "File read. Starting timer and generating contour lines.\n";
 	hpx::util::high_resolution_timer t;
 		
-	boost::shared_array<boost::shared_ptr<vector<vector<pointxy>>>> contours =
-		boost::shared_array<boost::shared_ptr<vector<vector<pointxy>>>>(new boost::shared_ptr<vector<vector<pointxy>>>[nL]);
+	boost::shared_array<boost::shared_array<boost::shared_ptr<vector<vector<pointxy>>>>> contours =
+		boost::shared_array<boost::shared_array<boost::shared_ptr<vector<vector<pointxy>>>>>(new boost::shared_array<boost::shared_ptr<vector<vector<pointxy>>>>[nL]);
    {
 		using hpx::lcos::future;
 		using hpx::async;
 		vector<future<int>> waiting;
 	   for (int i = 0; i < heights.size(); ++i)
 	   {
-		   contours[i] = boost::shared_ptr<vector<vector<pointxy>>>(new vector<vector<pointxy>>());
-		   waiting.push_back(async(&retLine,heights[i], nele/3, x,y,depth,ele,contours[i]));
+           contours[i] = boost::shared_array<boost::shared_ptr<vector<vector<pointxy>>>>(new boost::shared_ptr<vector<vector<pointxy>>>[node.size()]);
+           for (int j = 0; j < nM; ++j)
+           {
+		       contours[i][j] = boost::shared_ptr<vector<vector<pointxy>>>(new vector<vector<pointxy>>());
+		       waiting.push_back(async(&retLine,heights[i], nele[j]/3, x[j],y[j],depth[j],ele[j],contours[i][j]));
+           }
 	  }
 	   hpx::wait_all(waiting);
    }
@@ -63,7 +70,7 @@ void outputLines(string input, string output, vector<string> attnames, vector<do
 	std::ofstream fout("times.txt", std::ios_base::app);
 	fout << os_threads << " " << ti << endl;
 	fout.close();
-	outputObj(contours, heights, nL,output);
+	outputObj(contours, heights, nL,nM,output);
 	return;
 }
 
