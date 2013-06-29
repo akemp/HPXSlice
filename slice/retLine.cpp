@@ -120,7 +120,7 @@ int retLine(double current, int size,
 		}
 	}
 	
-	double margin = 0.00001;
+	double margin = 0.001;
 
 	{
 		bool found = true;

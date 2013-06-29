@@ -2,7 +2,9 @@
 cmake_minimum_required(VERSION 2.8.4 FATAL_ERROR)
 
 # This project is C++ based.
-project(HPXSlice CXX)
+project(HPXSlice)
+
+add_subdirectory (external)
 
 # This adds the HPX cmake configuration directory to the search path.
 set(CMAKE_MODULE_PATH
@@ -30,6 +32,6 @@ set (sources
 # add example executable
 add_hpx_executable(slice
              SOURCES ${sources}
-             ${PLAYGROUND_FLAGS} 
+             ${SLICE_FLAGS} 
              FOLDER 
-             COMPONENT_DEPENDENCIES ${hpx_RUNTIME_LIBRARIES})
+             COMPONENT_DEPENDENCIES assimp)

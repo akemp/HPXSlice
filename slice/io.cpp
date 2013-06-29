@@ -57,46 +57,70 @@ bool readFile(boost::shared_array<double> &x,
    int retval;
    int time;
    bool hasTime = false;
-   std::ifstream fin("bin.obj");
-   if (!fin.is_open())
-	   return false;
-   while (fin.good())
    {
-       char* in = new char[10000];
-       fin.getline(in,10000);
-       ++node;
-   }
-   nele = (node*6)/4;
-   fin.close();
-   fin.open("bin.obj");
-   /* Get the varid of the data variable, based on its name. */
-
+    Assimp::Importer importer;
+    // And have it read the given file with some example postprocessing
+    // Usually - if speed is not the most important aspect for you - you'll
+    // propably to request more postprocessing than we do in this example.
+    const aiScene* scene = importer.ReadFile( "tree.obj",
+    aiProcess_Triangulate |
+    aiProcess_JoinIdenticalVertices);
+    if (!scene)
+        return false;
+    if (!scene->HasMeshes())
+        return false;
+    vector<int> indexes;
+    vector<double> xvec;
+    vector<double> yvec;
+    vector<double> zvec;
+    int total = 0;
+    for (int j = 0; j < scene->mNumMeshes; ++j)
+    {
+   aiMesh* mesh =  scene->mMeshes[j];
+   int tnode = mesh->mNumVertices;
+   int tnele = mesh->mNumFaces*3;
+     
+     for (int i = 0; i < tnode; ++i)
+     {
+         xvec.push_back(mesh->mVertices[i].x);
+         yvec.push_back(mesh->mVertices[i].z);
+         zvec.push_back(mesh->mVertices[i].y);
+     }
+     for (int i = 0; i < tnele/3; ++i)
+     {
+         if (mesh->mFaces[i].mNumIndices == 3)
+         {
+             indexes.push_back(mesh->mFaces[i].mIndices[0]+total);
+             indexes.push_back(mesh->mFaces[i].mIndices[1]+total);
+             indexes.push_back(mesh->mFaces[i].mIndices[2]+total);
+         }
+     }
+     total += tnode + 1;
+    }
+    
+   node = xvec.size();
+   nele = indexes.size();
 	 x = boost::shared_array<double>(new double[node]);
 	 y = boost::shared_array<double>(new double[node]);
 	 depth = boost::shared_array<double>(new double[node]);
 	 ele = boost::shared_array<int>(new int[nele]);
-     int count = 0;
-     while (fin.good() && count < node)
+     
+     for (int i = 0; i < node; ++i)
      {
-         fin >> x[count] >> depth[count] >> y[count];
-         count++;
+         x[i] = xvec[i];
+         y[i] = yvec[i];
+         depth[i] = zvec[i];
      }
-     for (int i = 0; i < count/6 && i < nele/6; ++i)
+     for (int i = 0; i < nele; ++i)
      {
-         int index = i*6;
-         int place = i*4;
-         ele[index] = place;
-         ele[index+1] = place+1;
-         ele[index+2] = place+2;
-         ele[index+3] = place;
-         ele[index+4] = place+2;
-         ele[index+5] = place+3;
+         ele[i] = indexes[i];
      }
+}
      if (false)
    {   
 	string filename = "debOutput.obj";
 	std::ofstream fout(filename);
-	count = 1;
+	int count = 1;
 	cout << "Writing to file.\n";
 	int counter = 0;
 	for (int i = 0; i < nele/3; i++)

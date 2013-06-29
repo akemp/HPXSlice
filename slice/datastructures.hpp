@@ -16,6 +16,10 @@
 #include <boost/format.hpp>
 #include <boost/program_options.hpp>
 
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h> // Output data structure
+#include <assimp/postprocess.h> // Post processing flags
+
 using std::vector;
 using std::cout;
 using std::endl;
